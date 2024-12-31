@@ -1,0 +1,67 @@
+{% extends "layout.html" %} {% block content %}
+<div class="content-section">
+  <div class="d-flex align-items-center">
+    <img class="rounded-circle account-img me-3" src="{{ image_file }}" />
+    <div>
+      <h2 class="account-heading">{{ current_user.username }}</h2>
+      <p class="text-secondary">{{ current_user.email }}</p>
+    </div>
+  </div>
+  <!-- FORM HERE -->
+  <form
+    method="POST"
+    action="{{url_for('account')}}"
+    enctype="multipart/form-data"
+  >
+    {{form.hidden_tag()}}
+    <fieldset class="form-group">
+      <legend class="border-bottom mb-4">Account Info</legend>
+      <!-- Username -->
+      <div class="form-group">
+        {{form.username.label(class="form-control-label")}}
+        <!-- Invalid Input -->
+        {% if form.username.errors %} {{form.username(class="form-control
+        form-control-lg is-invalid")}}
+        <div class="invalid-feedback">
+          {% for error in form.username.errors %}
+          <span>{{error}}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <!-- Valid Input -->
+        {{form.username(class="form-control form-control-lg")}} {% endif %}
+      </div>
+      <!-- Email -->
+      <div class="form-group">
+        {{form.email.label(class="form-control-label")}}
+        <!-- Invalid Input -->
+        {% if form.email.errors %} {{form.email(class="form-control
+        form-control-lg is-invalid")}}
+        <div class="invalid-feedback">
+          {% for error in form.email.errors %}
+          <span>{{error}}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <!-- Valid Input -->
+        {{form.email(class="form-control form-control-lg")}} {% endif %}
+      </div>
+      <!-- Image -->
+      <div class="form-group">
+        {{form.image.label(class="form-control-label mt-2")}}
+        <!-- Invalid Input -->
+        {% if form.image.errors %} {{form.image(class="form-control-file
+        form-control mt-2 is-invalid")}} {% for error in form.image.errors %}
+        <span class="text-danger">{{error}}</span><br />
+        {% endfor %} {% else %}
+        <!-- Valid Input -->
+        {{form.image(class="form-control-file form-control mt-2")}} {% endif %}
+      </div>
+    </fieldset>
+    <div class="form-group mt-3">
+      <!-- Submit Button -->
+      {{form.submit(class="btn btn-outline-info")}}
+    </div>
+  </form>
+</div>
+{% endblock content %}
