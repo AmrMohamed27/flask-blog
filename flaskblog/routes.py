@@ -1,20 +1,61 @@
 from flask import render_template, url_for, flash, redirect, request, jsonify
-from flaskblog.forms import RegistrationForm, LoginForm, UpdateAccountForm
+from flaskblog.forms import (RegistrationForm, LoginForm, UpdateAccountForm, AddPostForm,
+                             UpdatePostForm, RequestResetForm, ResetPasswordForm)
 from PIL import Image
 from datetime import datetime
 from bson.objectid import ObjectId
-from flaskblog import app, db, bcrypt, User
+from flaskblog import app, db, bcrypt, User, mail
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
+from flask_mail import Message
 
 
 # Homepage
 @app.route("/")
 def home():
-    # Fetch posts from the MongoDB database
-    posts = list(db.posts.find({}, {"_id": 0}))  # Exclude `_id` field from the result
-    return render_template("home.html", posts=posts)
+    # Get page number from URL parameters, default to 1
+    page = request.args.get('page', 1, type=int)
+    sort = request.args.get("sort", "newest", type=str)
+    sortBy = {"date_posted": -1} if sort == "newest" else {"date_posted": 1}
+    posts_per_page = 4
+    skip = (page - 1) * posts_per_page
+    total_posts = db.posts.count_documents({})
+    total_pages = (total_posts + posts_per_page - 1) // posts_per_page
+
+    posts = list(db.posts.aggregate([
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "author",
+                "foreignField": "_id",
+                "as": "author_details"
+            }
+        },
+        {"$unwind": "$author_details"},
+        {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "content": 1,
+                "date_posted": 1,
+                "author_details.username": 1
+            }
+        },
+        {"$sort": sortBy},  # Sort by date, newest first
+        {"$skip": skip},
+        {"$limit": posts_per_page}
+    ]))
+
+    return render_template(
+        "home.html",
+        posts=posts,
+        page=page,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+        sort=sort
+    )
 
 # About page
 @app.route("/about")
@@ -96,25 +137,67 @@ def account():
     return render_template("account.html", title="Account", image_file=image_file, form=form)
 
 
-#####  API
-
 ### Posts
 
 # Add a new post
-@app.route('/api/posts/add', methods=['POST'])
+@app.route('/posts/add', methods=['GET', 'POST'])
 def add_post():
-    data = request.form
-    user_id = ObjectId(data["author"])  # Ensure author is a valid ObjectId
-    post = {"author": user_id, "title": data["title"], "content": data["content"], "date_posted": datetime.now()}
-    # Add the new post
-    post_id = db.posts.insert_one(post).inserted_id
-     # Update the user's posts array
-    db.users.update_one(
-        {"_id": user_id},
-        {"$push": {"posts": post_id}}
-    )
-    flash(f"Post added successfully!", category="success")
-    return redirect(url_for("home"))
+    form = AddPostForm()
+    if form.validate_on_submit():
+        data = request.form
+        user_id = ObjectId(current_user.id)  # Ensure author is a valid ObjectId
+        post = {"author": user_id, "title": data["title"], "content": data["content"], "date_posted": datetime.now()}
+        # Add the new post
+        post_id = db.posts.insert_one(post).inserted_id
+        # Update the user's posts array
+        db.users.update_one(
+            {"_id": user_id},
+            {"$push": {"posts": post_id}}
+        )
+        flash(f"Post added successfully!", category="success")
+        return redirect(url_for("home"))
+    elif request.method == "GET":
+        form.title.data = ""
+        form.content.data = ""
+        return render_template("add_post.html", title="Create Post", form=form, endpoint=url_for("add_post"))
+    
+
+# Get a post by id
+# Route for individual post
+@app.route("/post/<post_id>")
+def post(post_id):
+    # Fetch the post by its ID and join with the users collection to get author details
+    post = list(db.posts.aggregate([
+        {
+            "$match": {"_id": ObjectId(post_id)}  # Match the post by its ID
+        },
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "author",
+                "foreignField": "_id",
+                "as": "author_details"
+            }
+        },
+        {"$unwind": "$author_details"},  # Flatten the author details array
+        {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "content": 1,
+                "date_posted": 1,
+                "author_details.username": 1
+            }
+        }
+    ]))
+
+    if not post:
+        flash("Post not found!", category="danger")
+        return redirect(url_for("home"))
+
+    # Since aggregation returns a list, take the first (and only) result
+    post = post[0]
+    return render_template("post.html", post=post)
 
 # Get all posts
 @app.route('/api/posts', methods=['GET'])
@@ -143,18 +226,69 @@ def get_all_posts():
     return jsonify(posts)
 
 # Update a post
-@app.route('/api/posts/update', methods=['PUT'])
-def update_post():
-    data = request.json
-    db.posts.update_one({"_id": data["_id"]}, {"$set": data})
-    return jsonify({"message": "Post updated successfully!"})
+@app.route("/post/<post_id>/update", methods=["GET", "POST"])
+@login_required
+def update_post(post_id):
+    form = UpdatePostForm()
+    # Fetch the post
+    post = db.posts.find_one({"_id": ObjectId(post_id)})
+    if not post:
+        flash("Post not found!", category="danger")
+        return redirect(url_for("home"))
 
-# Delete a post
-@app.route('/api/posts/delete', methods=['DELETE'])
-def delete_post():
-    data = request.json
-    db.posts.delete_one({"author": data["author"]})
-    return jsonify({"message": "Post deleted successfully!"})
+    # Check if the current user is the author of the post
+    if post["author"] != ObjectId(current_user.id):
+        flash("You are not authorized to update this post!", category="danger")
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        # Update the post
+        title = request.form.get("title")
+        content = request.form.get("content")
+        db.posts.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$set": {"title": title, "content": content}}
+        )
+        flash("Post updated successfully!", category="success")
+        return redirect(url_for("post", post_id=post_id))
+
+    # Render the update form with the current post data
+    else:
+        form.title.data = post["title"]
+        form.content.data = post["content"]
+        return render_template("add_post.html", post=post, form=form, title="Update Post", endpoint=url_for("update_post", post_id=post_id))
+
+# Delete the post
+@app.route("/post/<post_id>/delete", methods=["POST"])
+@login_required
+def delete_post(post_id):
+    try:
+        # Fetch the post
+        post = db.posts.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            flash("Post not found!", category="danger")
+            return redirect(url_for("home"))
+
+        # Check if the current user is the author of the post
+        if post["author"] != ObjectId(current_user.id):
+            flash("You are not authorized to delete this post!", category="danger")
+            return redirect(url_for("home"))
+
+        # Delete the post
+        db.posts.delete_one({"_id": ObjectId(post_id)})
+        
+        # Remove the post reference from the user's posts array
+        db.users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {"$pull": {"posts": ObjectId(post_id)}}
+        )
+        
+        flash("Post deleted successfully!", category="success")
+        return redirect(url_for("home"))
+        
+    except Exception as e:
+        flash(f"An error occurred while deleting the post: {str(e)}", category="danger")
+        return redirect(url_for("home"))
 
 
 ### Users
@@ -202,3 +336,52 @@ def get_user_posts(user_id):
 
 
 
+
+# Request password reset
+@app.route('/reset_password', methods=['GET', 'POST'])
+def request_reset():
+    if current_user.is_authenticated:  # Redirect if already logged in
+        return redirect(url_for("home"))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = db.users.find_one({"email": form.email.data})
+        if user:
+            user_instance = User(str(user["_id"]), user["username"], user["email"], user["image"])
+            token = user_instance.get_reset_token()
+            send_email(user["email"], "Reset Password", token)
+            flash(f"Password reset email sent to {user["email"]}!", category="info")
+            return redirect(url_for("home"))
+        else:
+            flash("No account found with that email!", category="danger")
+            return redirect(url_for("home"))
+    return render_template("request_reset.html", form=form, title="Reset Password")
+
+
+# Send Email
+def send_email(to, subject, token):
+    msg = Message(subject, sender=app.config["MAIL_USERNAME"], recipients=[to])
+    msg.body = f'''To reset your password, please click the following link:
+{url_for('request_token', token=token, _external=True)}
+
+If you did not request a password reset, please ignore this email.
+    '''
+    mail.send(msg)
+
+# password reset
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def request_token(token):
+    if current_user.is_authenticated:  # Redirect if already logged in
+        return redirect(url_for("home"))
+    user = User.verify_reset_token(token)
+    if user is None:
+        flash("Invalid token!", category="danger")
+        return redirect(url_for("home"))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+        data = {"password": hashed_password}
+        res = db.users.update_one({"_id": ObjectId(user.id)}, {"$set": data })
+        print(res.modified_count)
+        flash(f'Your password has been updated! You can now log in', category="success")
+        return redirect(url_for("login"))
+    return render_template("reset_password.html", form=form, title="Reset Password", token=token)

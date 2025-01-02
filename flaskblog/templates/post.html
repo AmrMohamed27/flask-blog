@@ -1,0 +1,81 @@
+{% extends "layout.html" %} {% block content %}
+<article class="media content-section">
+  <div class="media-body">
+    <div class="article-metadata">
+      <a class="mr-2" href="#">{{ post.author_details.username }}</a>
+      <small class="text-muted"
+        >{{ post.date_posted.strftime("%b %d, %Y") }}</small
+      >
+    </div>
+    <h2 class="article-title">{{ post.title }}</h2>
+    <p class="article-content">{{ post.content }}</p>
+    <div class="d-flex flex-row gap-4">
+      <a
+        href="{{url_for('update_post', post_id=post._id)}}"
+        class="btn btn-primary px-4"
+        >Edit</a
+      >
+      <button
+        type="button"
+        class="btn btn-danger px-4"
+        data-bs-toggle="modal"
+        data-bs-target="#deleteModal"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</article>
+
+<!-- Delete Modal -->
+<div
+  class="modal fade"
+  id="deleteModal"
+  tabindex="-1"
+  aria-labelledby="deleteModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this post? This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <form
+          action="{{ url_for('delete_post', post_id=post._id) }}"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+<!-- Add this to your layout.html if you haven't already -->
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Optional: Add any additional JavaScript functionality here
+    const deleteModal = document.getElementById("deleteModal");
+    deleteModal.addEventListener("shown.bs.modal", function () {
+      // Focus on the delete button when modal opens
+      deleteModal.querySelector(".btn-danger").focus();
+    });
+  });
+</script>
+{% endblock scripts %}

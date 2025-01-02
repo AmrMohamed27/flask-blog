@@ -5,6 +5,8 @@ from flask_pymongo import PyMongo
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin
 from bson.objectid import ObjectId
+from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
+from flask_mail import Mail
 
 
 
@@ -14,6 +16,12 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config["MONGO_URI"] = os.getenv("MONGO_URI")
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT"))
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+mail = Mail(app)
 
 # Initialize PyMongo
 mongo = PyMongo(app)
@@ -79,6 +87,19 @@ class User(UserMixin):
         if not user_data:
             return None
         return User(str(user_data["_id"]), user_data["username"], user_data["email"], user_data["image"])
+    
+    def get_reset_token(self, expires_sec=1800):
+        s = Serializer(app.config["SECRET_KEY"])
+        return s.dumps({"id": self.id})
+    
+    @staticmethod
+    def verify_reset_token(token):
+        s = Serializer(app.config["SECRET_KEY"])
+        try:
+            data = s.loads(token)
+        except:
+            return None
+        return User.get(data["id"])
 
 
 @login_manager.user_loader

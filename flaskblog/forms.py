@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, PasswordField, SubmitField, BooleanField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from flaskblog import db
 from flask_login import current_user
@@ -59,3 +59,32 @@ class UpdateAccountForm(FlaskForm):
             user = db.users.find_one({"email": email.data})
             if user:
                 raise ValidationError("Email already exists")
+
+class AddPostForm(FlaskForm):
+    title = StringField("Title", validators=[DataRequired()])
+    content = TextAreaField("Content", validators=[DataRequired()])
+    submit = SubmitField("Add Post")
+    
+    
+class UpdatePostForm(FlaskForm):
+    title = StringField("Title", validators=[DataRequired()])
+    content = TextAreaField("Content", validators=[DataRequired()])
+    submit = SubmitField("Update Post")
+    
+class RequestResetForm(FlaskForm):
+     email = StringField("Email", validators=[DataRequired(), Email(message="Invalid email")])
+     submit = SubmitField("Request Password Reset")
+     
+     def validate_email(self, email):
+        user = db.users.find_one({"email": email.data})
+        if user is None:
+            raise ValidationError("There is no account with that email. Please create an account first.")
+        
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField("Password", validators=[
+    DataRequired(), Length(min=6, max=20)
+    ])
+    confirm_password = PasswordField("Confirm Password", validators=[
+    DataRequired(), Length(min=6, max=20), EqualTo("password", message="Passwords don't match")
+    ])
+    submit = SubmitField("Reset Password")
