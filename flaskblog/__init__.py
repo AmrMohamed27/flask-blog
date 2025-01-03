@@ -106,8 +106,10 @@ def create_app(config_class="flaskblog.config.Config"):
     from flaskblog.users.routes import users_blueprint
     from flaskblog.posts.routes import posts_blueprint
     from flaskblog.main.routes import main_blueprint
+    from flaskblog.errors.handlers import errors_blueprint
     app.register_blueprint(users_blueprint)
     app.register_blueprint(posts_blueprint)
     app.register_blueprint(main_blueprint)
+    app.register_blueprint(errors_blueprint)
 
     return app
