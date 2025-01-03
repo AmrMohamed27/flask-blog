@@ -71,7 +71,7 @@ login_manager = LoginManager(app)
 
 
 # Redirect to login page if user is not logged in
-login_manager.login_view = "login"
+login_manager.login_view = "users.login"
 login_manager.login_message_category = 'info'  # Flash message category for login required
 
 class User(UserMixin):
@@ -108,4 +108,10 @@ def load_user(user_id):
 
 
 
-from flaskblog import routes
+from flaskblog.users.routes import users_blueprint
+from flaskblog.posts.routes import posts_blueprint
+from flaskblog.main.routes import main_blueprint
+
+app.register_blueprint(users_blueprint)
+app.register_blueprint(posts_blueprint)
+app.register_blueprint(main_blueprint)

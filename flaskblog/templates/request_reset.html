@@ -1,6 +1,6 @@
 {% extends "layout.html" %} {% block content %}
 <div class="content-section">
-  <form method="POST" action="{{url_for('request_reset')}}">
+  <form method="POST" action="{{url_for('users.request_reset')}}">
     {{form.hidden_tag()}}
     <fieldset class="form-group">
       <legend class="border-bottom mb-4">{{title}}</legend>

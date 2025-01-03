@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from flaskblog import db
 from flask_login import current_user
@@ -60,16 +60,7 @@ class UpdateAccountForm(FlaskForm):
             if user:
                 raise ValidationError("Email already exists")
 
-class AddPostForm(FlaskForm):
-    title = StringField("Title", validators=[DataRequired()])
-    content = TextAreaField("Content", validators=[DataRequired()])
-    submit = SubmitField("Add Post")
-    
-    
-class UpdatePostForm(FlaskForm):
-    title = StringField("Title", validators=[DataRequired()])
-    content = TextAreaField("Content", validators=[DataRequired()])
-    submit = SubmitField("Update Post")
+
     
 class RequestResetForm(FlaskForm):
      email = StringField("Email", validators=[DataRequired(), Email(message="Invalid email")])

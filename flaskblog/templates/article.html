@@ -7,7 +7,9 @@
       >
     </div>
     <h2>
-      <a class="article-title" href="{{ url_for('post', post_id=post._id) }}"
+      <a
+        class="article-title"
+        href="{{ url_for('posts.post', post_id=post._id) }}"
         >{{ post.title }}</a
       >
     </h2>

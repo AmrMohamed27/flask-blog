@@ -11,7 +11,7 @@
     <p class="article-content">{{ post.content }}</p>
     <div class="d-flex flex-row gap-4">
       <a
-        href="{{url_for('update_post', post_id=post._id)}}"
+        href="{{url_for('posts.update_post', post_id=post._id)}}"
         class="btn btn-primary px-4"
         >Edit</a
       >
@@ -54,7 +54,7 @@
           Cancel
         </button>
         <form
-          action="{{ url_for('delete_post', post_id=post._id) }}"
+          action="{{ url_for('posts.delete_post', post_id=post._id) }}"
           method="POST"
           style="display: inline"
         >

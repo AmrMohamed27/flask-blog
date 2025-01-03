@@ -1,6 +1,6 @@
 {% extends "layout.html" %} {% block content %}
 <div class="content-section">
-  <form method="POST" action="{{url_for('login')}}">
+  <form method="POST" action="{{url_for('users.login')}}">
     {{form.hidden_tag()}}
     <fieldset class="form-group">
       <legend class="border-bottom mb-4">Log In</legend>
@@ -51,7 +51,7 @@
 <div class="border-top pt-3">
   <small class="text-muted">
     Don&apos;t have an account?
-    <a href="{{url_for('register')}}" class="ml-2">Register Now!</a>
+    <a href="{{url_for('users.register')}}" class="ml-2">Register Now!</a>
   </small>
 </div>
 {% endblock content %}
