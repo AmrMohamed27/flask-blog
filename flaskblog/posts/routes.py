@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify
+from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify, current_app
 from flaskblog.posts.forms import ( AddPostForm, UpdatePostForm)
 from datetime import datetime
 from bson.objectid import ObjectId
-from flaskblog import db
 from flask_login import  current_user, login_required
-
+from flaskblog import mongo
 posts_blueprint = Blueprint("posts", __name__)
 
 
@@ -19,9 +18,9 @@ def add_post():
         user_id = ObjectId(current_user.id)  # Ensure author is a valid ObjectId
         post = {"author": user_id, "title": data["title"], "content": data["content"], "date_posted": datetime.now()}
         # Add the new post
-        post_id = db.posts.insert_one(post).inserted_id
+        post_id = mongo.db.posts.insert_one(post).inserted_id
         # Update the user's posts array
-        db.users.update_one(
+        mongo.db.users.update_one(
             {"_id": user_id},
             {"$push": {"posts": post_id}}
         )
@@ -38,7 +37,7 @@ def add_post():
 @posts_blueprint.route("/post/<post_id>")
 def post(post_id):
     # Fetch the post by its ID and join with the users collection to get author details
-    post = list(db.posts.aggregate([
+    post = list(mongo.db.posts.aggregate([
         {
             "$match": {"_id": ObjectId(post_id)}  # Match the post by its ID
         },
@@ -73,7 +72,7 @@ def post(post_id):
 # Get all posts
 @posts_blueprint.route('/api/posts', methods=['GET'])
 def get_all_posts():
-    posts = list(db.posts.aggregate([
+    posts = list(mongo.db.posts.aggregate([
         {
             "$lookup": {
                 "from": "users",
@@ -102,7 +101,7 @@ def get_all_posts():
 def update_post(post_id):
     form = UpdatePostForm()
     # Fetch the post
-    post = db.posts.find_one({"_id": ObjectId(post_id)})
+    post = mongo.db.posts.find_one({"_id": ObjectId(post_id)})
     if not post:
         flash("Post not found!", category="danger")
         return redirect(url_for("main.home"))
@@ -116,7 +115,7 @@ def update_post(post_id):
         # Update the post
         title = request.form.get("title")
         content = request.form.get("content")
-        db.posts.update_one(
+        mongo.db.posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$set": {"title": title, "content": content}}
         )
@@ -135,7 +134,7 @@ def update_post(post_id):
 def delete_post(post_id):
     try:
         # Fetch the post
-        post = db.posts.find_one({"_id": ObjectId(post_id)})
+        post = mongo.db.posts.find_one({"_id": ObjectId(post_id)})
         if not post:
             flash("Post not found!", category="danger")
             return redirect(url_for("main.home"))
@@ -146,10 +145,10 @@ def delete_post(post_id):
             return redirect(url_for("main.home"))
 
         # Delete the post
-        db.posts.delete_one({"_id": ObjectId(post_id)})
+        mongo.db.posts.delete_one({"_id": ObjectId(post_id)})
         
         # Remove the post reference from the user's posts array
-        db.users.update_one(
+        mongo.db.users.update_one(
             {"_id": ObjectId(current_user.id)},
             {"$pull": {"posts": ObjectId(post_id)}}
         )

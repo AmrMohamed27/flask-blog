@@ -2,8 +2,8 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
-from flaskblog import db
 from flask_login import current_user
+from flaskblog import mongo
 
 class RegistrationForm(FlaskForm):
     username = StringField("Username", validators=[
@@ -19,12 +19,12 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField("Sign Up")
     
     def validate_username(self, username):
-        user = db.users.find_one({"username": username.data})
+        user = mongo.db.users.find_one({"username": username.data})
         if user:
             raise ValidationError("Username already exists")
         
     def validate_email(self, email):
-        user = db.users.find_one({"email": email.data})
+        user = mongo.db.users.find_one({"email": email.data})
         if user:
             raise ValidationError("Email already exists")
     
@@ -50,13 +50,13 @@ class UpdateAccountForm(FlaskForm):
     
     def validate_username(self, username):
         if username.data != current_user.username:
-            user = db.users.find_one({"username": username.data})
+            user = mongo.db.users.find_one({"username": username.data})
             if user:
                 raise ValidationError("Username already exists")
 
     def validate_email(self, email):
         if email.data != current_user.email:
-            user = db.users.find_one({"email": email.data})
+            user = mongo.db.users.find_one({"email": email.data})
             if user:
                 raise ValidationError("Email already exists")
 
@@ -67,7 +67,7 @@ class RequestResetForm(FlaskForm):
      submit = SubmitField("Request Password Reset")
      
      def validate_email(self, email):
-        user = db.users.find_one({"email": email.data})
+        user = mongo.db.users.find_one({"email": email.data})
         if user is None:
             raise ValidationError("There is no account with that email. Please create an account first.")
         

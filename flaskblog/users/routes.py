@@ -1,12 +1,13 @@
 # Register page
-from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify
+from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify, current_app
 from flaskblog.users.forms import (RegistrationForm, LoginForm, UpdateAccountForm,
                              RequestResetForm, ResetPasswordForm)
 from datetime import datetime
 from bson.objectid import ObjectId
-from flaskblog import db, bcrypt, User
+from flaskblog import bcrypt, User
 from flask_login import login_user, current_user, logout_user, login_required
 from flaskblog.utils import save_image, send_email
+from flaskblog import mongo
 
 
 users_blueprint = Blueprint("users", __name__)
@@ -17,7 +18,7 @@ def register():
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
         user = {"username": form.username.data, "email": form.email.data, "password": hashed_password, "date_joined": datetime.now(), "image": "default.jpg"}
-        user_id = db.users.insert_one(user).inserted_id
+        user_id = mongo.db.users.insert_one(user).inserted_id
         flash(f'Account created for {user["username"]}! You can now log in', category="success")
         return redirect(url_for("users.login"))
     return render_template("register.html",title="Register" , form=form)
@@ -29,7 +30,7 @@ def login():
         return redirect(url_for("main.home"))
     form = LoginForm()
     if form.validate_on_submit():
-         user_data = db.users.find_one({"email": form.email.data})
+         user_data = mongo.db.users.find_one({"email": form.email.data})
          if user_data and bcrypt.check_password_hash(user_data["password"], form.password.data):
             user = User(str(user_data["_id"]), user_data["username"], user_data["email"], user_data["image"])
             login_user(user, remember=form.remember.data)
@@ -58,8 +59,8 @@ def account():
     form = UpdateAccountForm()
     if form.validate_on_submit():
         new_image = save_image(form.image.data)
-        db.users.update_one({"_id": ObjectId(current_user.id)}, {"$set": {"username": form.username.data, "email": form.email.data, "image": new_image}})
-        updated_user_data = db.users.find_one({"_id": ObjectId(current_user.id)})
+        mongo.db.users.update_one({"_id": ObjectId(current_user.id)}, {"$set": {"username": form.username.data, "email": form.email.data, "image": new_image}})
+        updated_user_data = mongo.db.users.find_one({"_id": ObjectId(current_user.id)})
         current_user.username = updated_user_data["username"]
         current_user.email = updated_user_data["email"]
         current_user.image = updated_user_data["image"]
@@ -80,39 +81,39 @@ def add_user():
     data = request.form
     # Create a new user object excluding 'confirm_password'
     user = {"username": data["username"], "email": data["email"], "password": data["password"], "date_joined": datetime.now()}
-    db.users.insert_one(user)
+    mongo.db.users.insert_one(user)
     flash(f'{user["email"]} signed in!', category="success")
     return redirect(url_for("main.home"))
 
 # Get all users
 @users_blueprint.route('/api/users', methods=['GET'])
 def get_all_users():
-    users = list(db.users.find({}, {"_id": 0}))
+    users = list(mongo.db.users.find({}, {"_id": 0}))
     return jsonify(users)
 
 # Update a user
 @users_blueprint.route('/api/users/update', methods=['PUT'])
 def update_user():
     data = request.json
-    db.users.update_one({"_id": data["_id"]}, {"$set": data})
+    mongo.db.users.update_one({"_id": data["_id"]}, {"$set": data})
     return jsonify({"message": "User updated successfully!"})
 
 # Delete a user
 @users_blueprint.route('/api/users/delete', methods=['DELETE'])
 def delete_user():
     data = request.json
-    db.users.delete_one({"username": data["username"]})
+    mongo.db.users.delete_one({"username": data["username"]})
     return jsonify({"message": "User deleted successfully!"})
 
 # Get user posts
 @users_blueprint.route('/api/users/<user_id>/posts', methods=['GET'])
 def get_user_posts(user_id):
-    user = db.users.find_one({"_id": ObjectId(user_id)})
+    user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     # Fetch posts using the `posts` field
-    posts = list(db.posts.find({"_id": {"$in": user["posts"]}}))
+    posts = list(mongo.db.posts.find({"_id": {"$in": user["posts"]}}))
     return jsonify(posts)
 
 
@@ -125,7 +126,7 @@ def request_reset():
         return redirect(url_for("main.home"))
     form = RequestResetForm()
     if form.validate_on_submit():
-        user = db.users.find_one({"email": form.email.data})
+        user = mongo.db.users.find_one({"email": form.email.data})
         if user:
             user_instance = User(str(user["_id"]), user["username"], user["email"], user["image"])
             token = user_instance.get_reset_token()
@@ -150,7 +151,7 @@ def request_token(token):
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
         data = {"password": hashed_password}
-        res = db.users.update_one({"_id": ObjectId(user.id)}, {"$set": data })
+        res = mongo.db.users.update_one({"_id": ObjectId(user.id)}, {"$set": data })
         print(res.modified_count)
         flash(f'Your password has been updated! You can now log in', category="success")
         return redirect(url_for("users.login"))
