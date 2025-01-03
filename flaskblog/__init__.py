@@ -1,6 +1,6 @@
 from flask import Flask
 from dotenv import load_dotenv
-import os
+from flaskblog.config import Config
 from flask_pymongo import PyMongo
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin
@@ -14,13 +14,8 @@ from flask_mail import Mail
 load_dotenv()
 # Initialize Flask and Get Environment Variables
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER")
-app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT"))
-app.config["MAIL_USE_TLS"] = True
-app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config.from_object(Config)
+
 mail = Mail(app)
 
 # Initialize PyMongo
