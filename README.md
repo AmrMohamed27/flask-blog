@@ -54,20 +54,20 @@ FlaskBlog is a fully functional blog application built with Flask, MongoDB, and 
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 3. **Install Dependencies**:
-  ```bash
-  pip install -r requirements.txt
-  ```
+   ```bash
+   pip install -r requirements.txt
+   ```
 4. **Set Up Environment Variables**:
-  Create a .env file in the root directory and add the following variables:
-  ```env
-  SECRET_KEY=your_secret_key
-  MONGO_URI=your_mongo_uri
-  MAIL_SERVER=smtp.gmail.com
-  MAIL_PORT=587
-  MAIL_USE_TLS=True
-  MAIL_USERNAME=your_email@gmail.com
-  MAIL_PASSWORD=your_email_password
-  ```
+   Create a .env file in the root directory and add the following variables:
+   ```env
+   SECRET_KEY=your_secret_key
+   MONGO_URI=your_mongo_uri
+   MAIL_SERVER=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USE_TLS=True
+   MAIL_USERNAME=your_email@gmail.com
+   MAIL_PASSWORD=your_email_password
+   ```
 5. **Run the Application**:
    ```bash
    python run.py
@@ -78,21 +78,19 @@ FlaskBlog is a fully functional blog application built with Flask, MongoDB, and 
 
 
 ### Project Structure
-```bash
-flask-blog/
-├── flaskblog/
-│   ├── __init__.py          # App factory and configuration
-│   ├── config.py            # Configuration settings
-│   ├── models.py            # User and Post models
-│   ├── routes/
-│   │   ├── main.py          # Main routes (home, about)
-│   │   ├── users.py         # User authentication routes
-│   │   ├── posts.py         # Blog post routes
-│   ├── static/              # Static files (CSS, JS, images)
-│   ├── templates/           # HTML templates
-│   └── utils.py             # Helper functions
-├── requirements.txt         # Project dependencies
-├── run.py                   # Application entry point
-└── README.md                # Project documentation
-```
+       flask-blog/
+       ├── flaskblog/
+       │   ├── __init__.py          # App factory and configuration
+       │   ├── config.py            # Configuration settings
+       │   ├── models.py            # User and Post models
+       │   ├── routes/
+       │   │   ├── main.py          # Main routes (home, about)
+       │   │   ├── users.py         # User authentication routes
+       │   │   ├── posts.py         # Blog post routes
+       │   ├── static/              # Static files (CSS, JS, images)
+       │   ├── templates/           # HTML templates
+       │   └── utils.py             # Helper functions
+       ├── requirements.txt         # Project dependencies
+       ├── run.py                   # Application entry point
+       └── README.md                # Project documentation
    
