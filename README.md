@@ -82,15 +82,13 @@ FlaskBlog is a fully functional blog application built with Flask, MongoDB, and 
        ├── flaskblog/
        │   ├── __init__.py          # App factory and configuration
        │   ├── config.py            # Configuration settings
-       │   ├── models.py            # User and Post models
-       │   ├── routes/
-       │   │   ├── main.py          # Main routes (home, about)
-       │   │   ├── users.py         # User authentication routes
-       │   │   ├── posts.py         # Blog post routes
+       │   ├── errors/              # Custom Error pages
+       │   ├── main/                # Main pages
+       │   ├── posts/               # Posts-related pages
+       │   ├── users/               # User-related pages
        │   ├── static/              # Static files (CSS, JS, images)
        │   ├── templates/           # HTML templates
        │   └── utils.py             # Helper functions
-       ├── requirements.txt         # Project dependencies
        ├── run.py                   # Application entry point
        └── README.md                # Project documentation
    
